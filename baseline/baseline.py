@@ -26,7 +26,7 @@ from sklearn.metrics import (
 	recall_score,
 	mean_absolute_error,
 	r2_score,
-	mean_squared_error,
+	root_mean_squared_error,
 	mean_absolute_percentage_error,
 	mean_squared_log_error,
 )
@@ -55,6 +55,7 @@ def seed_everything(seed):
 
 
 seed_everything(seed=42)
+
 
 class baseline:
 	model_name = ['LGBM', 'CAT', 'XGB', 'Voting', 'TABNET', 'Ridge', 'LR']
@@ -167,12 +168,36 @@ class baseline:
 	def mape(self, y_true, y_pred):
 		return mean_absolute_percentage_error(y_true, y_pred)
 
-	def weighted_mean_absolute_error(self, y_true, y_pred, weights):
-		return np.sum(weights * np.abs(y_true - y_pred)) / np.sum(weights)
-
-	def rmsLe(self, y_true, y_pred):
-		y_pred = np.maximum(y_pred, 1e-6)
-		return np.sqrt(mean_squared_log_error(y_true, y_pred))
-
-	def mape(self, y_true, y_pred):
-		return mean_absolute_percentage_error(y_true, y_pred)
+	def get_metric(self, y_true, y_pred, weights=None):
+		if self.metric == 'roc_auc':
+			return roc_auc_score(y_true, y_pred, multi_class='ovr' if self.num_classes > 2 else None)
+		elif self.metric == 'accuracy':
+			return accuracy_score(y_true, y_pred.round())
+		elif self.metric == 'f1':
+			return f1_score(y_true, y_pred.round(), average='weighted') if self.num_classes > 2 else f1_score(y_true, y_pred.round())
+		elif self.metric == 'precision':
+			return (
+				precision_score(y_true, y_pred.round(), average='weighted')
+				if self.num_classes > 2
+				else precision_score(y_true, y_pred.round())
+			)
+		elif self.metric == 'recall':
+			return (
+				recall_score(y_true, y_pred.round(), average='weighted') if self.num_classes > 2 else recall_score(y_true, y_pred.round())
+			)
+		elif self.metric == 'mae':
+			return mean_absolute_error(y_true, y_pred)
+		elif self.metric == 'r2':
+			return r2_score(y_true, y_pred)
+		elif self.metric == 'rmse':
+			return root_mean_squared_error(y_true, y_pred)
+		elif self.metric == 'wmae' and weights is not None:
+			return self.weighted_mean_absolute_error(y_true, y_pred, weights)
+		elif self.metric == 'rmsle':
+			return self.rmsLe(y_true, y_pred)
+		elif self.metric == 'mape':
+			return self.mape(y_true, y_pred)
+		elif self.metric == 'custom' and callable(self.custom_metric):
+			return self.custom_metric(y_true, y_pred)
+		else:
+			raise ValueError(f"Unsupported metric '{self.metric}'")
