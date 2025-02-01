@@ -136,7 +136,7 @@ class baseline:
 		self.target_encode = target_encode
 		self.custom_metric = custom_metric
 		self.eval_metric_model = eval_metric_model
-		self.logger = logger or self._setup_default_logger()
+		self.logger = logger if logger is not None else self._setup_default_logger()
 
 		if self.metric == 'custom' and callable(self.custom_metric):
 			self.metric_name = self.custom_metric.__name__
@@ -146,6 +146,20 @@ class baseline:
 		self._validate_input()
 		self._checkTarget()
 		self._display_initial_info()
+
+			
+		if self.handle_date: 
+			print(Fore.YELLOW + "Adding Date Features")
+
+			if self.train_data is not None:
+				self.train_data = self.date(
+					df=self.train_data,
+				)
+
+			if self.test_data is not None:
+				self.test_data = self.date(
+					df=self.test_data,
+				)
 
 	def _checkTarget(self):
 		if self.train_data[self.target_column].dtype == 'object':
@@ -240,3 +254,15 @@ class baseline:
 		handler.setFormatter(formatter)
 		logger.addHandler(handler)
 		return logger
+	
+	@staticmethod
+	def date(df): 
+		df['date'] = pd.to_datetime(df['date'])
+		df['year'] = df['date'].dt.year
+		df['day'] = df['date'].dt.day
+		df['month'] = df['date'].dt.month
+		df['month_name'] = df['date'].dt.month_name()
+		df['day_of_week'] = df['date'].dt.day_name()
+		df['week'] = df['date'].dt.isocalendar().week
+		df.drop('date', axis=1, inplace=True)
+		return df
