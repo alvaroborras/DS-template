@@ -4,7 +4,10 @@ import pandas as pd
 import polars as pl
 import numpy as np
 from tqdm import tqdm
-from loguru import logger
+
+import logging
+
+from colorama import Fore
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -98,7 +101,7 @@ class baseline:
 		num_classes=None,
 		prob=False,
 		stat_fe=None,
-		logger: Optional[loguru.logger] = None,
+		logger: Optional[logging.Logger] = None,
 		eval_metric_model=None,
 		early_stop=False,
 		test_prob=False,
@@ -141,6 +144,29 @@ class baseline:
 			self.metric_name = self.metric
 
 		self._validate_input()
+		self._checkTarget()
+		self._display_initial_info()
+
+	def _checkTarget(self):
+		if self.train_data[self.target_column].dtype == 'object':
+			raise ValueError('Encode Target First')
+
+	def _display_initial_info(self):
+		print(Fore.RED + ' *** Available Settings *** \n')
+		print(Fore.RED + 'Available Models:', ', '.join([Fore.CYAN + model for model in self.model_name]))
+		print(Fore.RED + 'Available Metrics:', ', '.join([Fore.CYAN + metric for metric in self.metrics]))
+		print(Fore.RED + 'Available Problem Types:', ', '.join([Fore.CYAN + problem for problem in self.problem_types]))
+		print(Fore.RED + 'Available Fold Types:', ', '.join([Fore.CYAN + fold for fold in self.cv_types]))
+
+		print(Fore.RED + '\n *** Configuration *** \n')
+		print(Fore.RED + f'Problem Type Selected: {Fore.CYAN + self.problem_type.upper()}')
+		print(Fore.RED + f'Metric Selected: {Fore.CYAN + self.metric.upper()}')
+		print(Fore.RED + f'Fold Type Selected: {Fore.CYAN + self.fold_type}')
+		print(Fore.RED + f'Calculate Train Probabilities: {Fore.CYAN + str(self.prob)}')
+		print(Fore.RED + f'Calculate Test Probabilities: {Fore.CYAN + str(self.test_prob)}')
+		print(Fore.RED + f'Early Stopping: {Fore.CYAN + str(self.early_stop)}')
+		print(Fore.RED + f'GPU: {Fore.CYAN + str(self.gpu)}')
+		print(Fore.RED + f'Eval_Metric Selected is: {Fore.CYAN + str(self.eval_metric_model)}')
 
 	def _validate_input(self):
 		if not isinstance(self.train_data, pd.DataFrame):
@@ -201,3 +227,16 @@ class baseline:
 			return self.custom_metric(y_true, y_pred)
 		else:
 			raise ValueError(f"Unsupported metric '{self.metric}'")
+
+	def _setup_default_logger(self) -> logging.Logger:
+		logger = logging.getLogger(self.__class__.__name__)
+		logger.setLevel(logging.INFO)
+
+		if logger.handlers:
+			logger.handlers.clear()
+
+		handler = logging.StreamHandler()
+		formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+		handler.setFormatter(formatter)
+		logger.addHandler(handler)
+		return logger
